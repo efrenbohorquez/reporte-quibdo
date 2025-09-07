@@ -39,8 +39,17 @@ logger = logging.getLogger(__name__)
 
 class ConfigPaths:
     """Configuración centralizada de rutas"""
-    WORD_DOC = Path(r"D:\Downloads\SEGUNDA ENTRGA 7 SEPTIEMBRE.docx")
-    EXCEL_FILE = Path(r"D:\Downloads\Instrumento Análisis Financiero - Grupo 5.xlsx")
+    # Rutas para desarrollo local
+    WORD_DOC_LOCAL = Path(r"D:\Downloads\SEGUNDA ENTRGA 7 SEPTIEMBRE.docx")
+    EXCEL_FILE_LOCAL = Path(r"D:\Downloads\Instrumento Análisis Financiero - Grupo 5.xlsx")
+    
+    # Rutas para Streamlit Cloud
+    WORD_DOC_CLOUD = Path("data/SEGUNDA_ENTREGA_7_SEPTIEMBRE.docx")
+    EXCEL_FILE_CLOUD = Path("data/Instrumento_Analisis_Financiero_Grupo_5.xlsx")
+    
+    # Detección automática del entorno - evaluado al momento de importar
+    WORD_DOC = WORD_DOC_CLOUD if WORD_DOC_CLOUD.exists() else WORD_DOC_LOCAL
+    EXCEL_FILE = EXCEL_FILE_CLOUD if EXCEL_FILE_CLOUD.exists() else EXCEL_FILE_LOCAL
 
 class AppConfig:
     """Configuración de la aplicación"""
