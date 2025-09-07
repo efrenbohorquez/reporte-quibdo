@@ -38,18 +38,57 @@ logger = logging.getLogger(__name__)
 # ===== CONFIGURACIÓN Y CONSTANTES =====
 
 class ConfigPaths:
-    """Configuración centralizada de rutas"""
+    """Configuración centralizada de rutas con detección dinámica"""
     # Rutas para desarrollo local
     WORD_DOC_LOCAL = Path(r"D:\Downloads\SEGUNDA ENTRGA 7 SEPTIEMBRE.docx")
     EXCEL_FILE_LOCAL = Path(r"D:\Downloads\Instrumento Análisis Financiero - Grupo 5.xlsx")
-    
+
     # Rutas para Streamlit Cloud
     WORD_DOC_CLOUD = Path("data/SEGUNDA_ENTREGA_7_SEPTIEMBRE.docx")
     EXCEL_FILE_CLOUD = Path("data/Instrumento_Analisis_Financiero_Grupo_5.xlsx")
-    
-    # Detección automática del entorno - evaluado al momento de importar
-    WORD_DOC = WORD_DOC_CLOUD if WORD_DOC_CLOUD.exists() else WORD_DOC_LOCAL
-    EXCEL_FILE = EXCEL_FILE_CLOUD if EXCEL_FILE_CLOUD.exists() else EXCEL_FILE_LOCAL
+
+    @classmethod
+    def get_word_doc_path(cls) -> Path:
+        """Obtiene la ruta correcta del documento Word según el entorno"""
+        # Primero intenta con la ruta de cloud (Streamlit Cloud)
+        if cls.WORD_DOC_CLOUD.exists():
+            logger.info(f"📁 Usando ruta Cloud para Word: {cls.WORD_DOC_CLOUD}")
+            return cls.WORD_DOC_CLOUD
+
+        # Si no existe, intenta con la ruta local
+        if cls.WORD_DOC_LOCAL.exists():
+            logger.info(f"📁 Usando ruta Local para Word: {cls.WORD_DOC_LOCAL}")
+            return cls.WORD_DOC_LOCAL
+
+        # Si ninguna existe, usar cloud por defecto (para mostrar mensaje de error controlado)
+        logger.warning("⚠️ No se encontró archivo Word en rutas locales ni cloud")
+        return cls.WORD_DOC_CLOUD
+
+    @classmethod
+    def get_excel_file_path(cls) -> Path:
+        """Obtiene la ruta correcta del archivo Excel según el entorno"""
+        # Primero intenta con la ruta de cloud (Streamlit Cloud)
+        if cls.EXCEL_FILE_CLOUD.exists():
+            logger.info(f"📁 Usando ruta Cloud para Excel: {cls.EXCEL_FILE_CLOUD}")
+            return cls.EXCEL_FILE_CLOUD
+
+        # Si no existe, intenta con la ruta local
+        if cls.EXCEL_FILE_LOCAL.exists():
+            logger.info(f"📁 Usando ruta Local para Excel: {cls.EXCEL_FILE_LOCAL}")
+            return cls.EXCEL_FILE_LOCAL
+
+        # Si ninguna existe, usar cloud por defecto (para mostrar mensaje de error controlado)
+        logger.warning("⚠️ No se encontró archivo Excel en rutas locales ni cloud")
+        return cls.EXCEL_FILE_CLOUD
+
+    # Propiedades para compatibilidad con código existente
+    @property
+    def WORD_DOC(self) -> Path:
+        return self.get_word_doc_path()
+
+    @property
+    def EXCEL_FILE(self) -> Path:
+        return self.get_excel_file_path()
 
 class AppConfig:
     """Configuración de la aplicación"""
@@ -103,11 +142,12 @@ class DataLoader:
             DocumentAnalysis o None si hay error
         """
         try:
-            if not ConfigPaths.WORD_DOC.exists():
-                logger.warning(f"Archivo Word no encontrado: {ConfigPaths.WORD_DOC}")
+            word_path = ConfigPaths.get_word_doc_path()
+            if not word_path.exists():
+                logger.warning(f"Archivo Word no encontrado: {word_path}")
                 return None
             
-            doc = Document(str(ConfigPaths.WORD_DOC))
+            doc = Document(str(word_path))
             
             # Extraer texto optimizado
             texto_completo = [
@@ -187,11 +227,12 @@ class DataLoader:
             Tupla con (datos_principales, todas_hojas, nombres_hojas)
         """
         try:
-            if not ConfigPaths.EXCEL_FILE.exists():
-                logger.warning(f"Archivo Excel no encontrado: {ConfigPaths.EXCEL_FILE}")
+            excel_path = ConfigPaths.get_excel_file_path()
+            if not excel_path.exists():
+                logger.warning(f"Archivo Excel no encontrado: {excel_path}")
                 return None, None, None
             
-            excel_file = pd.ExcelFile(str(ConfigPaths.EXCEL_FILE))
+            excel_file = pd.ExcelFile(str(excel_path))
             hojas = excel_file.sheet_names
             
             if not hojas:
@@ -200,7 +241,7 @@ class DataLoader:
             
             # Datos principales (primera hoja)
             datos_principales = pd.read_excel(
-                str(ConfigPaths.EXCEL_FILE), 
+                str(excel_path), 
                 sheet_name=0,
                 na_values=['', ' ', 'N/A', 'n/a', 'NULL']
             )
@@ -210,7 +251,7 @@ class DataLoader:
             for hoja in hojas:
                 try:
                     df_hoja = pd.read_excel(
-                        str(ConfigPaths.EXCEL_FILE), 
+                        str(excel_path), 
                         sheet_name=hoja,
                         na_values=['', ' ', 'N/A', 'n/a', 'NULL']
                     )
@@ -418,7 +459,7 @@ datos_word = DataLoader.cargar_documento_word()
 # Verificar si los datos se cargaron correctamente
 if datos_excel is None or hojas_excel is None or datos_word is None:
     st.error("⚠️ Error al cargar los datos. Verifica que los archivos existan en las rutas especificadas.")
-    st.info(f"📁 Buscando archivos en: {ConfigPaths.EXCEL_FILE} y {ConfigPaths.WORD_DOC}")
+    st.info(f"📁 Buscando archivos en: {ConfigPaths.get_excel_file_path()} y {ConfigPaths.get_word_doc_path()} en Streamlit Cloud")
     st.stop()
 
 # Header principal
